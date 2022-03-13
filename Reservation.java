@@ -1,34 +1,36 @@
-//Sarmilan Sreekaran
-//500758148
-/*
- * A simple class to model an electronic airline flight reservation
- * 
- * This class has been done for you
- */
+
 public class Reservation
 {
 	String flightNum;
 	String flightInfo;
-	boolean firstClass;
-	
+	String name;
+	String passport;
+	String seat;
+	String seatType;
 	
 	public Reservation(String flightNum, String info)
 	{
 		this.flightNum = flightNum;
 		this.flightInfo = info;
-		this.firstClass = false;
 	}
 	
-	public boolean isFirstClass()
+	public Reservation(String flightNum, String name, String passport)
 	{
-		return firstClass;
+		this.flightNum = flightNum;
+		this.name = name;
+		this.passport = passport;
 	}
-
-	public void setFirstClass()
+	
+	public Reservation(String flightNum, String info, String name, String passport, String seat, String seatType)
 	{
-		this.firstClass = true;
+		this.flightNum = flightNum;
+		this.flightInfo = info;
+		this.name = name;
+		this.passport = passport;
+		this.seat = seat;
+		this.seatType = seatType;
 	}
-
+	
 	public String getFlightNum()
 	{
 		return flightNum;
@@ -43,9 +45,15 @@ public class Reservation
 	{
 		this.flightInfo = flightInfo;
 	}
+	
+	public boolean equals(Object other)
+	{
+		Reservation otherRes = (Reservation) other;
+		return flightNum.equals(otherRes.flightNum)&&  name.equals(otherRes.name) && passport.equals(otherRes.passport); 
+	}
 
 	public void print()
 	{
-		System.out.println(flightInfo);
+		System.out.println(flightInfo + " " + name + " " + seat);
 	}
 }

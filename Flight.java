@@ -1,23 +1,39 @@
-//Sarmilan Sreekaran
-//500758148
-/* 
- *  Class to model an airline flight. In this simple system, all flights originate from Toronto
- *  
- *  This class models a simple flight that has only economy seats
- */
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
+
 public class Flight
 {
 	public enum Status {DELAYED, ONTIME, ARRIVED, INFLIGHT};
+	public static enum Type {SHORTHAUL, MEDIUMHAUL, LONGHAUL};
+	public static enum SeatType {ECONOMY, FIRSTCLASS, BUSINESS};
 
-	String flightNum;
-	String airline;
-	String origin, dest;
-	String departureTime;
-	Status status; // see enum Status above. google this to see how to use it
-	int flightDuration;
-	Aircraft aircraft;
-	protected int passengers; // count of (economy) passengers on this flight - initially 0
-  
+	private String flightNum;
+	private String airline;
+	private String origin, dest;
+	private String departureTime;
+	private Status status;
+	private int flightDuration;
+	protected Aircraft aircraft;
+	protected int numPassengers;
+	protected Type type;
+	protected ArrayList<Passenger> manifest;
+	protected TreeMap<String, Passenger> seatMap = new TreeMap<String, Passenger>();
+	int cap;
+	protected Random random = new Random();
+	
+	private String errorMessage = "";
+	  
+	public String getErrorMessage()
+	{
+		return errorMessage;
+	}
+	public void setErrorMessage(String errorMessage)
+	{
+		this.errorMessage = errorMessage;
+	}
+
 	public Flight()
 	{
 		this.flightNum = "";
@@ -26,12 +42,20 @@ public class Flight
 		this.origin = "Toronto";
 		this.departureTime = "";
 		this.flightDuration = 0;
-		this.aircraft = new Aircraft(0, "");
-		passengers = 0;
+		this.aircraft = null;
+		numPassengers = 0;
 		status = Status.ONTIME;
+		type = Type.MEDIUMHAUL;
+		manifest = new ArrayList<Passenger>();
+		
 	}
 	
-	public Flight(String flightNum, String airline, String dest, String departure, int flightDuration, Aircraft aircraft)
+	public Flight(String flightNum)
+	{
+		this.flightNum = flightNum;
+	}
+	
+	public Flight(String flightNum, String airline, String dest, String departure, int flightDuration, Aircraft aircraft, int cap)
 	{
 		this.flightNum = flightNum;
 		this.airline = airline;
@@ -40,10 +64,19 @@ public class Flight
 		this.departureTime = departure;
 		this.flightDuration = flightDuration;
 		this.aircraft = aircraft;
-		passengers = 0;
+		numPassengers = 0;
 		status = Status.ONTIME;
-		
+		type = Type.MEDIUMHAUL;
+		manifest = new ArrayList<Passenger>();
+		this.seatMap = fillSeats(cap);
+		this.cap=cap;
 	}
+	
+	public Type getFlightType()
+	{
+		return type;
+	}
+	
 	public String getFlightNum()
 	{
 		return flightNum;
@@ -102,54 +135,131 @@ public class Flight
 		this.flightDuration = dur;
 	}
 	
-	public int getPassengers()
+	public int getNumPassengers()
 	{
-		return passengers;
+		return numPassengers;
 	}
-	public void setPassengers(int passengers)
+	public void setNumPassengers(int numPassengers)
 	{
-		this.passengers = passengers;
-	}
-	
-	// Check to see if there is room on this flight - compare current passenger count
-	// with aircraft max capacity of economy seats
-	public boolean seatsAvailable()
-	{
-		if (passengers<aircraft.getNumSeats())//if there are less passengers than seats 
-			return true;
-		else //if seats are full
-			return false;
+		this.numPassengers = numPassengers;
 	}
 	
-	/*
-	 * Cancel a seat - essentially reduce the passenger count by 1. Make sure the count does not
-	 * fall below 0 (see instance variable passenger)
-	 */
-	public void cancelSeat()
+	public void assignSeat(Passenger p)
 	{
-		if(passengers>0)//if there are passengers in the flight
-			passengers--;//1 less passenger
+		int seat = random.nextInt(aircraft.numEconomySeats);
+		p.setSeat("ECO"+ seat);
 	}
 	
-	/*
-	 * reserve a seat on this flight - essentially increases the passenger count by 1 only if there is room for more
-	 * economy passengers on the aircraft used for this flight (see instance variables above)
-	 */
-	public boolean reserveSeat()
+	public String getLastAssignedSeat()
 	{
-		if(seatsAvailable()) {
-			passengers++;//adds 1 passenger
-			return true;
+		if (!manifest.isEmpty())
+			return manifest.get(manifest.size()-1).getSeat();
+		return "";
+	}
+	
+	public boolean seatsAvailable(String seatType)
+	{
+		if (!seatType.equalsIgnoreCase("ECO")) return false;
+		return numPassengers < aircraft.numEconomySeats;
+	}
+	
+	public void cancelSeat(String name, String passport, String seatType) throws Flight.PassengerNotInManifestException, Flight.SeatTypeInvalidException
+	{
+		if (!seatType.equalsIgnoreCase("ECO")) 
+		{
+			throw new SeatTypeInvalidException("Flight " + flightNum + " Invalid Seat Type Request");
 		}
-		else 
-			return false;
+
+		Passenger p = new Passenger(name, passport);
+		
+		if (manifest.indexOf(p) == -1) 
+		{
+			throw new PassengerNotInManifestException("Passenger " + name + " " + passport + " Not Found");														
+		}
+
+		manifest.remove(p);
+		if (numPassengers > 0) numPassengers--;
 	}
 	
-	public String toString()//returns the info as a string
+	public void reserveSeat(String name, String passport, String seatType) throws Flight.DuplicatePassengerException, Flight.SeatTypeInvalidException, Flight.FlightFullException
+	{
+		if (numPassengers >= aircraft.getNumSeats())
+		{
+			throw new FlightFullException("Flight " + flightNum + " Full");
+		}
+		if (!seatType.equalsIgnoreCase("ECO")) 
+		{
+			throw new SeatTypeInvalidException("Flight " + flightNum + " Invalid Seat Type Request");
+		}	
+		// Check for duplicate passenger
+		Passenger p = new Passenger(name, passport, "", seatType);
+	
+		if (manifest.indexOf(p) >=  0)
+		{
+			throw new DuplicatePassengerException("Duplicate Passenger " + p.getName() + " " + p.getPassport());
+		}
+		assignSeat(p);
+		manifest.add(p);
+		numPassengers++;
+	}
+	
+	public boolean equals(Object other)
+	{
+		Flight otherFlight = (Flight) other;
+		return this.flightNum.equals(otherFlight.flightNum);
+	}
+	
+	public String toString()
 	{
 		 return airline + "\t Flight:  " + flightNum + "\t Dest: " + dest + "\t Departing: " + departureTime + "\t Duration: " + flightDuration + "\t Status: " + status;
-		
 	}
-
-  
+	public TreeMap<String, Passenger> fillSeats(int cap) {
+		String seat="";
+		for (int j=0;j<4;j++) {
+			  for (int i=0;i<cap/4;i++) {
+				  char test = (char)(j+65);
+				  seat= i+1+"";
+				  seat+=test;
+				  seatMap.put(seat, null);
+			  }
+		  }
+		return seatMap;
+	}
+	public void printSeatMap() {
+		Set<String> keys = seatMap.keySet();
+		int counter = 0;
+		for(String key: keys){
+			/*counter++;
+			if(counter>seatMap.size()/4) {
+				System.out.println();
+				counter=1;
+			}*/
+			System.out.print(key+" ");
+		}
+	}
+	public void printPassengerManifest() {
+		for(int i=0;i<manifest.size();i++) {
+			System.out.println(manifest.get(i).getName()+" "+manifest.get(i).getPassport()+" "+manifest.get(i).getSeat());
+		}
+	}
+	public class DuplicatePassengerException extends Exception {
+	    public DuplicatePassengerException(String errorMessage) {
+	        super(errorMessage);
+	    }
+	}
+	public class PassengerNotInManifestException extends Exception {
+	    public PassengerNotInManifestException(String errorMessage) {
+	        super(errorMessage);
+	    }
+	}
+	public class SeatTypeInvalidException extends Exception {
+	    public SeatTypeInvalidException(String errorMessage) {
+	        super(errorMessage);
+	    }
+	}
+	public class FlightFullException extends Exception {
+	    public FlightFullException(String errorMessage) {
+	        super(errorMessage);
+	    }
+	}
 }

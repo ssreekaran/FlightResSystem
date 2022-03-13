@@ -1,96 +1,84 @@
-//Sarmilan Sreekaran
-//500758148
 /*
- * A long haul flight is a flight that travels thousands of kilometers and typically has separate seating areas 
+ * A Long Haul Flight is a flight that travels a long distance and has two types of seats (First Class and Economy)
  */
+
 public class LongHaulFlight extends Flight
 {
-	int numFirstClassPassengers;
-	String seatType;
-	
-	// Possible seat types
-	public static final String firstClass = "First Class Seat";
-	public static final String economy 		= "Economy Seat";  
-	
-
-	public LongHaulFlight(String flightNum, String airline, String dest, String departure, int flightDuration, Aircraft aircraft)
+	int firstClassPassengers;
+		
+	public LongHaulFlight(String flightNum, String airline, String dest, String departure, int flightDuration, Aircraft aircraft, int cap)
 	{
-		super(flightNum, airline, dest, departure, flightDuration, aircraft);
+		super(flightNum, airline, dest, departure, flightDuration, aircraft, cap);
+		type = Flight.Type.LONGHAUL;
 	}
 
 	public LongHaulFlight()
 	{
-     	super.flightNum = "";
-     	super.airline = "";
-     	super.dest = "";
-     	super.departureTime = "";
-     	super.flightDuration = 0;
-     	super.aircraft = null;
-     	this.numFirstClassPassengers=0;
-     	this.seatType = firstClass;
+		firstClassPassengers = 0;
+		type = Flight.Type.LONGHAUL;
 	}
 	
-	/*
-	 * Reserves a seat on a flight. Essentially just increases the number of (economy) passengers
-	 */
-	public boolean reserveSeat()
+	public void assignSeat(Passenger p)
 	{
-		// override the inherited reserveSeat method and call the reserveSeat method below with an economy seatType
-		// use the constants defined at the top
-		return reserveSeat(economy);
+		int seat = random.nextInt(aircraft.getNumFirstClassSeats());
+		p.setSeat("FCL"+ seat);
 	}
-
-	/*
-	 * Reserves a seat on a flight. Essentially just increases the number of passengers, depending on seat type (economy or first class)
-	 */
-	public boolean reserveSeat(String seatType)
+	
+	public void reserveSeat(String name, String passport, String seatType) throws Flight.DuplicatePassengerException, Flight.SeatTypeInvalidException, Flight.FlightFullException
 	{
-		// if seat type is economy 
-		//			call the superclass method reserveSeat() and return the result
-		// else if the seat type is first class then 
-		// 			check to see if there are more first class seats available (use the aircraft method to get the max first class seats
-		// 			of this airplane
-		//    	if there is a seat available, increment first class passenger count (see instance variable at the top of the class)
-		//    	return true;
-		// else return false
-		if(seatType.equals(economy)) {
-			return super.reserveSeat();//uses Flights reserveSeat
-		}
-		else if(seatType.equals(firstClass)) {
-			if(this.numFirstClassPassengers<super.aircraft.getNumFirstClassSeats()) {//checks if there is enough space in first class
-				numFirstClassPassengers++;
-				return true;
+		if (seatType.equalsIgnoreCase("FCL"))
+		{
+			if (firstClassPassengers >= aircraft.getNumFirstClassSeats())
+			{
+				setErrorMessage("No First Class Seats Available");
 			}
+			Passenger p = new Passenger(name, passport, "", seatType);
+			
+			if (manifest.indexOf(p) >=  0)
+			{
+				setErrorMessage("Duplicate Passenger " + p.getName() + " " + p.getPassport());
+			}
+			
+			assignSeat(p);
+			manifest.add(p);
+			firstClassPassengers++;
 		}
-		return false;
+		else  // economy passenger
+			super.reserveSeat(name, passport, seatType);
 	}
 	
-	// Cancel a seat 
-	public void cancelSeat()
+	public void cancelSeat(String name, String passport, String seatType) throws Flight.PassengerNotInManifestException, Flight.SeatTypeInvalidException
 	{
-	  // override the inherited cancelSeat method and call the cancelSeat method below with an economy seatType
-		// use the constants defined at the top
-		cancelSeat(economy);
+		if (seatType.equalsIgnoreCase("FCL"))
+		{
+			Passenger p = new Passenger(name, passport);
+			if (manifest.indexOf(p) == -1) 
+			{
+				setErrorMessage("Passenger " + p.getName() + " " + p.getPassport() + " Not Found");
+			}
+			manifest.remove(p);
+			if (firstClassPassengers > 0)	firstClassPassengers--;
+		}
+		else 
+			super.cancelSeat(name, passport, seatType);
 	}
 	
-	public void cancelSeat(String seatType)
-	{
-		// if seat type is first class and first class passenger count is > 0
-		//  decrement first class passengers
-		// else
-		// decrement inherited (economy) passenger count
-		if(seatType.equals(firstClass)) {
-			if(numFirstClassPassengers>0) 
-				numFirstClassPassengers--;//cancels first class
-			else
-				super.passengers--;//cancels economy class
-		}
-		
-	}
-	// return the total passenger count of economy passengers *and* first class passengers
-	// use instance variable at top and inherited method that returns economy passenger count
 	public int getPassengerCount()
 	{
-		return super.getPassengers()+this.numFirstClassPassengers;//returns total passenger count
+		return getNumPassengers() +  firstClassPassengers;
+	}
+	
+	
+	public boolean seatsAvailable(String seatType)
+	{
+		if (seatType.equals("FCL"))
+			return firstClassPassengers < aircraft.getNumFirstClassSeats();
+		else
+			return super.seatsAvailable(seatType);
+	}
+	
+	public String toString()
+	{
+		 return super.toString() + "\t LongHaul";
 	}
 }
