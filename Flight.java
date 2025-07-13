@@ -227,7 +227,7 @@ public class Flight
 	}
 	public void printSeatMap() {
 		Set<String> keys = seatMap.keySet();
-		int counter = 0;
+		//int counter = 0;
 		for(String key: keys){
 			/*counter++;
 			if(counter>seatMap.size()/4) {

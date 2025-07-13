@@ -30,29 +30,31 @@ public class FlightManager
   
   public FlightManager() throws FileNotFoundException
   {
-	Scanner in = new Scanner(flightData);
-  	// Create some aircraft types with max seat capacities
-  	airplanes.add(new Aircraft(85, "Boeing 737"));
-  	airplanes.add(new Aircraft(180,"Airbus 320"));
-  	airplanes.add(new Aircraft(37, "Dash-8 100"));
-  	airplanes.add(new Aircraft(4, "Bombardier 5000"));
-  	airplanes.add(new Aircraft(592, 14, "Boeing 747"));
-  	while(in.hasNext()) {
-		String airline = space(in.next());
-		String flightNum = generateFlightNumber(airline);
-		String dest = in.next();
-		String departure = in.next();
-		int flightTimesPos = 0;
-		for(int i=0;i<cities.length;i++) {
-			if(cities[i].equals(dest)) {
-				flightTimesPos = i;
-			}
-		}
-		int cap =in.nextInt();
-		Aircraft air = findAircraft(cap);
-		Flight flight = new Flight(flightNum, airline, dest, departure, flightTimes[flightTimesPos], air, cap);
-		flights.add(flight);		
-	}
+    // Create some aircraft types with max seat capacities
+    airplanes.add(new Aircraft(85, "Boeing 737"));
+    airplanes.add(new Aircraft(180,"Airbus 320"));
+    airplanes.add(new Aircraft(37, "Dash-8 100"));
+    airplanes.add(new Aircraft(4, "Bombardier 5000"));
+    airplanes.add(new Aircraft(592, 14, "Boeing 747"));
+    
+    try (Scanner in = new Scanner(flightData)) {
+        while(in.hasNext()) {
+            String airline = space(in.next());
+            String flightNum = generateFlightNumber(airline);
+            String dest = in.next();
+            String departure = in.next();
+            int flightTimesPos = 0;
+            for(int i=0;i<cities.length;i++) {
+                if(cities[i].equals(dest)) {
+                    flightTimesPos = i;
+                }
+            }
+            int cap = in.nextInt();
+            Aircraft air = findAircraft(cap);
+            Flight flight = new Flight(flightNum, airline, dest, departure, flightTimes[flightTimesPos], air, cap);
+            flights.add(flight);		
+        }
+    }
   	/*
   	// Populate the list of flights with some random test flights
   	String flightNum = generateFlightNumber("United Airlines");
@@ -92,18 +94,25 @@ public class FlightManager
   private String generateFlightNumber(String airline)
   {
   	String word1, word2;
-  	Scanner scanner = new Scanner(airline);
-  	word1 = scanner.next();
-  	word2 = scanner.next();
-  	String letter1 = word1.substring(0, 1);
-  	String letter2 = word2.substring(0, 1);
-  	letter1.toUpperCase(); letter2.toUpperCase();
-  	
-  	// Generate random number between 101 and 300
-  	boolean duplicate = false;
-  	int flight = random.nextInt(200) + 101;
-  	String flightNum = letter1 + letter2 + flight;
-   	return flightNum;
+  	try (Scanner scanner = new Scanner(airline)) {
+  	  word1 = scanner.next();
+  	  word2 = scanner.next();
+  	  String letter1 = word1.substring(0, 1).toUpperCase();
+  	  String letter2 = word2.substring(0, 1).toUpperCase();
+  	  
+  	  // Generate random number between 101 and 300
+  	  int flight = random.nextInt(200) + 101;
+  	  String flightNum = letter1 + letter2 + flight;
+  	  
+  	  // Check for duplicate flight numbers
+  	  while (flightNumbers.contains(flightNum)) {
+  	    flight = random.nextInt(200) + 101;
+  	    flightNum = letter1 + letter2 + flight;
+  	  }
+  	  
+  	  flightNumbers.add(flightNum);
+  	  return flightNum;
+  	}
   }
 
   public String getErrorMessage()
